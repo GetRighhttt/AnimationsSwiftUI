@@ -8,13 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
+    
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                ForEach(0 ..< 10) { item in
+                ForEach(0 ..< 20) { item in
                     GeometryReader { geometry in
                         RoundedRectangle(cornerRadius: 30)
-                            .fill(LinearGradient(colors: [.black,.pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: [randomColor(),randomColor()], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .rotation3DEffect(
                                 Angle(degrees: Double(geometry.frame(in: .global).minX) / -20),
                                 axis: (x: 0.0, y: 4.0, z: 0.0))
@@ -24,6 +25,13 @@ struct ContentView: View {
             }
         }.padding()
     }
+    
+    private func randomColor() -> Color {
+            let colors: [Color] = [.red, .yellow, .green, .blue, .purple, .orange]
+            let index = Int.random(in: 0...5)
+            
+            return colors[index]
+        }
 }
 
 struct ContentView_Previews: PreviewProvider {
