@@ -19,7 +19,7 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 
-/*
+/**
  View for Home.
  */
 struct HomeView: View {
@@ -29,10 +29,36 @@ struct HomeView: View {
      */
     @State var offset: CGSize = .zero
     
+    @State var showHome = false
+    
     var body: some View {
         ZStack {
             LinearGradient(colors: [.pink, Color("darkpurple"), .red, .green, .accentColor], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .clipShape(LiquidSwipe())
+            /**
+             we set our content before the animation so it doesn't carry over into the next view.
+             */
+                .overlay(
+                    /**
+                     Content...
+                     */
+                    VStack {
+                        Image(systemName: "moonphase.waxing.crescent")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 200, height: 200)
+                            .foregroundColor(.white)
+                            .offset(x: -25)
+                        
+                        Text("Start!")
+                            .font(.largeTitle)
+                            .fontWeight(.heavy)
+                            .foregroundColor(.white)
+                            .padding()
+                            .offset(x: -25)
+                    }
+                    
+                )
+                .clipShape(LiquidSwipe(offset: offset))
                 .ignoresSafeArea()
             /**
              adding in the arrow now as an overlay...
@@ -46,18 +72,73 @@ struct HomeView: View {
                         .contentShape(Rectangle())
                         .gesture(DragGesture().onChanged({ (value) in
                             
-                            let offset = value.translation
-                            print(offset)
+                            
+                            /**
+                             Here is where we add in the withAnimation affect
+                             */
+                            withAnimation(.interactiveSpring(response: 0.7, dampingFraction: 0.6, blendDuration: 0.6)) {
+                                offset = value.translation
+                            }
                             
                         }).onEnded({ (value) in
                             
                             
+                            let screen = UIScreen.main.bounds
+                            withAnimation(.spring()) {
+                                /**
+                                 validating to move to new screen
+                                 */
+                                if -offset.width > screen.width / 2 {
+                                    /**
+                                     removing the view if so
+                                     */
+                                    offset.width = -screen.height
+                                    showHome.toggle()
+                                }
+                                else {
+                                    offset = .zero
+                                }
+                            }
                             
                         }))
                         .offset(x: 15, y: 45)
+                    /**
+                     hiding while dragging starts..
+                     */
+                        .opacity(offset == .zero ? 1: 0)
                     ,alignment: .topTrailing
                 )
                 .padding(.trailing) // makes the white barrier next to the gradient
+            
+            if showHome{
+                VStack {
+                    Image(systemName: "moonphase.waning.crescent")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 200, height: 200)
+                        .foregroundColor(.white)
+                        .offset(x: -25)
+                        .onTapGesture {
+                            withAnimation(.spring()) {
+                                offset = .zero
+                                showHome.toggle()
+                            }
+                        }
+                    
+                    Text("Finish!")
+                        .font(.largeTitle)
+                        .fontWeight(.heavy)
+                        .foregroundColor(.white)
+                        .padding()
+                        .offset(x: -25)
+                        .onTapGesture {
+                            withAnimation(.spring()) {
+                                offset = .zero
+                                showHome.toggle()
+                            }
+                        }
+                }
+            }
             
         }
     }
@@ -67,12 +148,28 @@ struct HomeView: View {
  Custom shape for liquid animation that we will pass in as a clip shape in our home view!
  */
 struct LiquidSwipe: Shape {
+    /**
+     getting offset
+     */
+    var offset: CGSize
+    
+    /**
+     animating the path now..
+     */
+    var animatableData: CGSize.AnimatableData{
+        get{ return offset.animatableData }
+        set{ offset.animatableData = newValue }
+    }
     
     func path(in rect: CGRect) -> Path {
         
         return Path { path in
             
-            let width = rect.width
+            /**
+             when the user moves left, we need to increase the size in the top and bottom to create
+             the liquid drag effect...
+             */
+            let width = rect.width + (-offset.width > 0 ? offset.width: 0)
             
             /**
              Constructing rectangular shape..
@@ -85,10 +182,25 @@ struct LiquidSwipe: Shape {
             /**
              Now constructing curve shape to drag liquid animation!
              */
-            path.move(to: CGPoint(x: width, y: 80))
             
-            let mid: CGFloat = 80 + ((180 - 80) / 2) // sets the curve
-            path.addCurve(to: CGPoint(x: width, y: 180), control1: CGPoint(x: width - 50, y: mid), control2: CGPoint(x: width - 50, y: mid))
+            /**
+             from and to
+             */
+            let from = 80 + (offset.width)
+            path.move(to: CGPoint(x: rect.width, y: from > 80 ? 80 : from))
+            
+            /**
+             add in more height
+             */
+            var to = 180 + (offset.height) + (-offset.width)
+            to = to < 180 ? 180 : to
+            
+            /**
+             the mid index
+             */
+            let mid: CGFloat = 80 + ((to - 80) / 2) // sets the curve
+            
+            path.addCurve(to: CGPoint(x: rect.width, y: to), control1: CGPoint(x: width - 50, y: mid), control2: CGPoint(x: width - 50, y: mid))
         }
     }
     
